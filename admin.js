@@ -1211,6 +1211,8 @@ const PROJECT_FIELDS = [
   { key: "status", type: "select", label: "Status", options: [{ value: "draft", label: "Draft" }, { value: "published", label: "Published" }, { value: "archived", label: "Archived" }], default: "draft" },
   { key: "featured", type: "boolean", label: "Featured project", default: false },
   { key: "sort_order", type: "number", label: "Sort Order", default: 0 },
+  { key: "likes_count", type: "number", label: "Likes count", default: 0 },
+  { key: "views_count", type: "number", label: "Views count", default: 0 },
   { key: "cover_image_url", type: "image", label: "Cover image", folder: "projects" },
   { key: "thumbnail_url", type: "image", label: "Thumbnail", folder: "projects" },
   { key: "logo_url", type: "image", label: "Project logo", folder: "projects" },
@@ -1268,7 +1270,17 @@ async function renderProjects(container) {
     if (!rows.length) { wrap.innerHTML = `<div class="empty-state">${tf("No projects match. Try a different search or add a new one.", "لا توجد مشاريع مطابقة. جرّب بحثًا مختلفًا أو أضف مشروعًا جديدًا.")}</div>`; return; }
     const table = h(`
       <table class="data-table">
-        <thead><tr><th></th><th>${tf("Title", "العنوان")}</th><th>${tf("Status", "الحالة")}</th><th>${tf("Featured", "مميز")}</th><th>${tf("Year", "السنة")}</th><th>${tf("Views", "المشاهدات")}</th><th>${tf("Order", "الترتيب")}</th><th></th></tr></thead>
+        <thead><tr>
+          <th></th>
+          <th>${tf("Title", "العنوان")}</th>
+          <th>${tf("Status", "الحالة")}</th>
+          <th>${tf("Featured", "مميز")}</th>
+          <th>${tf("Year", "السنة")}</th>
+          <th>❤️ ${tf("Likes", "الإعجابات")}</th>
+          <th>${tf("Views", "المشاهدات")}</th>
+          <th>${tf("Order", "الترتيب")}</th>
+          <th></th>
+        </tr></thead>
         <tbody></tbody>
       </table>
     `);
@@ -1284,13 +1296,38 @@ async function renderProjects(container) {
           <td>${statusBadge}</td>
           <td>${r.featured ? `<span class="badge badge-gold">★ ${tf("Featured", "مميز")}</span>` : ""}</td>
           <td>${r.year || "—"}</td>
-          <td>${r.views_count ?? 0}</td>
+          <td>
+            <div class="inline-metric">
+              <input type="number" class="likes-input" min="0" value="${r.likes_count ?? 0}" data-id="${esc(r.id)}" title="${tf("Edit likes", "تعديل الإعجابات")}">
+              <button type="button" class="btn-icon save-likes" title="${tf("Save likes", "حفظ الإعجابات")}">💾</button>
+            </div>
+          </td>
+          <td>
+            <div class="inline-metric">
+              <input type="number" class="views-input" min="0" value="${r.views_count ?? 0}" data-id="${esc(r.id)}" title="${tf("Edit views", "تعديل المشاهدات")}">
+              <button type="button" class="btn-icon save-views" title="${tf("Save views", "حفظ المشاهدات")}">💾</button>
+            </div>
+          </td>
           <td>${r.sort_order ?? 0}</td>
         </tr>
       `);
       const actionsTd = h(`<td><div class="row-actions"><button class="btn-icon edit-btn" title="${tf("Edit", "تعديل")}">✎</button><button class="btn-icon del-btn" title="${tf("Delete", "حذف")}">🗑</button></div></td>`);
       $(".edit-btn", actionsTd).addEventListener("click", () => openProjectForm(r, () => renderProjects(container)));
       $(".del-btn", actionsTd).addEventListener("click", () => confirmDelete({ table: "projects", singular: tf("Project", "مشروع") }, r, () => renderProjects(container)));
+      $(".save-likes", tr).addEventListener("click", async () => {
+        const input = $(".likes-input", tr);
+        const val = Math.max(0, parseInt(input.value, 10) || 0);
+        const { error } = await sb.from("projects").update({ likes_count: val }).eq("id", r.id);
+        if (error) toast(tf("Save failed: ", "فشل الحفظ: ") + error.message, "error");
+        else { r.likes_count = val; toast(tf("Likes updated", "تم تحديث الإعجابات")); }
+      });
+      $(".save-views", tr).addEventListener("click", async () => {
+        const input = $(".views-input", tr);
+        const val = Math.max(0, parseInt(input.value, 10) || 0);
+        const { error } = await sb.from("projects").update({ views_count: val }).eq("id", r.id);
+        if (error) toast(tf("Save failed: ", "فشل الحفظ: ") + error.message, "error");
+        else { r.views_count = val; toast(tf("Views updated", "تم تحديث المشاهدات")); }
+      });
       tr.appendChild(actionsTd);
       tbody.appendChild(tr);
     });
@@ -1739,6 +1776,56 @@ async function renderUsers(container) {
 /* ============================================================
    DASHBOARD OVERVIEW
 ============================================================ */
+function donutChart(percent, color, label, valueText) {
+  const p = Math.max(0, Math.min(100, percent || 0));
+  const r = 42;
+  const c = 2 * Math.PI * r;
+  const offset = c - (p / 100) * c;
+  return `
+    <div class="donut-card">
+      <svg class="donut-svg" viewBox="0 0 100 100" width="110" height="110">
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="10"
+          stroke-linecap="round" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
+          transform="rotate(-90 50 50)"/>
+        <text x="50" y="54" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="700">${esc(valueText)}</text>
+      </svg>
+      <div class="donut-label">${esc(label)}</div>
+      <div class="donut-sub">${p.toFixed(0)}%</div>
+    </div>
+  `;
+}
+
+function sparklinePath(values, w = 280, h = 70) {
+  const vals = values.length ? values : [0];
+  const max = Math.max(...vals, 1);
+  const min = Math.min(...vals, 0);
+  const range = Math.max(max - min, 1);
+  const step = vals.length > 1 ? w / (vals.length - 1) : w;
+  const pts = vals.map((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / range) * (h - 8) - 4;
+    return [x, y];
+  });
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${h} L0,${h} Z`;
+  return { line, area, w, h };
+}
+
+function barChartRows(items, maxVal) {
+  const max = Math.max(maxVal || 1, 1);
+  return items.map((it) => {
+    const pct = Math.round((it.value / max) * 100);
+    return `
+      <div class="bar-row">
+        <div class="bar-label" title="${esc(it.label)}">${esc(it.label)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${it.color || "var(--gold)"}"></div></div>
+        <div class="bar-value">${it.value}</div>
+      </div>
+    `;
+  }).join("");
+}
+
 async function renderDashboard(container) {
   container.innerHTML = `
     <div class="topbar">
@@ -1746,27 +1833,164 @@ async function renderDashboard(container) {
     </div>
     <div class="content">
       <div class="stat-grid" id="statGrid"><div class="loading-row"><div class="spinner"></div></div></div>
+
+      <div class="dash-charts" id="dashCharts">
+        <div class="panel dash-panel">
+          <div class="panel-head">
+            <div>
+              <h3>${tf("Engagement overview", "نظرة عامة على التفاعل")}</h3>
+              <p>${tf("Relative circles for likes, views & messages", "دوائر نسبية للإعجابات والمشاهدات والرسائل")}</p>
+            </div>
+          </div>
+          <div class="donut-row" id="donutRow"><div class="loading-row"><div class="spinner"></div></div></div>
+        </div>
+        <div class="panel dash-panel">
+          <div class="panel-head">
+            <div>
+              <h3>${tf("Activity curve", "منحنى النشاط")}</h3>
+              <p>${tf("Messages received over the last 14 days", "الرسائل الواردة خلال آخر 14 يومًا")}</p>
+            </div>
+          </div>
+          <div id="sparkWrap"><div class="loading-row"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+
+      <div class="dash-charts">
+        <div class="panel dash-panel">
+          <div class="panel-head">
+            <div>
+              <h3>❤️ ${tf("Top liked projects", "أكثر المشاريع إعجابًا")}</h3>
+              <p>${tf("Compare likes across projects", "مقارنة الإعجابات بين المشاريع")}</p>
+            </div>
+          </div>
+          <div id="likesBars"><div class="loading-row"><div class="spinner"></div></div></div>
+        </div>
+        <div class="panel dash-panel">
+          <div class="panel-head">
+            <div>
+              <h3>👁 ${tf("Top viewed projects", "أكثر المشاريع مشاهدة")}</h3>
+              <p>${tf("Compare views across projects", "مقارنة المشاهدات بين المشاريع")}</p>
+            </div>
+          </div>
+          <div id="viewsBars"><div class="loading-row"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+
       <div class="panel">
         <div class="panel-head"><h3>${tf("Recent messages", "أحدث الرسائل")}</h3></div>
         <div class="table-wrap" id="recentMsgs"><div class="loading-row"><div class="spinner"></div></div></div>
       </div>
     </div>
   `;
-  const [{ count: totalProjects }, { count: publishedProjects }, { count: newMessages }, { count: totalMessages }, { data: recent }] = await Promise.all([
+
+  const safe = async (fn) => { try { return await fn(); } catch (e) { console.warn(e); return null; } };
+
+  const [
+    totalProjectsRes,
+    publishedRes,
+    newMsgRes,
+    totalMsgRes,
+    recent,
+    projectsData,
+    likesRows,
+    visitsCountRes,
+    messagesForCurve,
+  ] = await Promise.all([
     sb.from("projects").select("*", { count: "exact", head: true }),
     sb.from("projects").select("*", { count: "exact", head: true }).eq("status", "published"),
     sb.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
     sb.from("contact_messages").select("*", { count: "exact", head: true }),
-    sb.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(5),
+    safe(() => sb.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(5).then((r) => r.data)),
+    safe(() => sb.from("projects").select("id,title,likes_count,views_count,status").order("likes_count", { ascending: false }).then((r) => r.data)),
+    safe(() => sb.from("project_likes").select("*", { count: "exact", head: true })),
+    safe(() => sb.from("site_visits").select("*", { count: "exact", head: true })),
+    safe(() => sb.from("contact_messages").select("created_at").gte("created_at", new Date(Date.now() - 14 * 86400000).toISOString()).then((r) => r.data)),
   ]);
+
+  const projects = projectsData || [];
+  const totalLikes = projects.reduce((s, p) => s + (Number(p.likes_count) || 0), 0);
+  const totalViews = projects.reduce((s, p) => s + (Number(p.views_count) || 0), 0);
+  const totalProjects = totalProjectsRes?.count ?? projects.length;
+  const publishedProjects = publishedRes?.count ?? 0;
+  const newMessages = newMsgRes?.count ?? 0;
+  const totalMessages = totalMsgRes?.count ?? 0;
+  const uniqueLikers = likesRows?.count ?? totalLikes;
+  const visitors = visitsCountRes?.count;
+
   $("#statGrid", container).innerHTML = `
-    <div class="stat-card"><b>${totalProjects ?? 0}</b><span>${tf("Total Projects", "إجمالي المشاريع")}</span></div>
-    <div class="stat-card"><b>${publishedProjects ?? 0}</b><span>${tf("Published", "منشور")}</span></div>
-    <div class="stat-card"><b>${newMessages ?? 0}</b><span>${tf("New Messages", "رسائل جديدة")}</span></div>
-    <div class="stat-card"><b>${totalMessages ?? 0}</b><span>${tf("Total Messages", "إجمالي الرسائل")}</span></div>
+    <div class="stat-card"><b>${totalProjects}</b><span>${tf("Total Projects", "إجمالي المشاريع")}</span></div>
+    <div class="stat-card"><b>${publishedProjects}</b><span>${tf("Published", "منشور")}</span></div>
+    <div class="stat-card stat-card-heart"><b>${totalLikes}</b><span>❤️ ${tf("Total Likes", "إجمالي الإعجابات")}</span></div>
+    <div class="stat-card"><b>${totalViews}</b><span>👁 ${tf("Total Views", "إجمالي المشاهدات")}</span></div>
+    <div class="stat-card"><b>${visitors != null ? visitors : "—"}</b><span>${tf("Site Visitors", "زوار الموقع")}</span></div>
+    <div class="stat-card"><b>${uniqueLikers}</b><span>${tf("Like events", "عمليات الإعجاب")}</span></div>
+    <div class="stat-card"><b>${newMessages}</b><span>${tf("New Messages", "رسائل جديدة")}</span></div>
+    <div class="stat-card"><b>${totalMessages}</b><span>${tf("Total Messages", "إجمالي الرسائل")}</span></div>
   `;
+
+  // Donut relative circles
+  const engMax = Math.max(totalLikes + totalViews + totalMessages, 1);
+  $("#donutRow", container).innerHTML = [
+    donutChart((totalLikes / engMax) * 100, "#e11d48", tf("Likes share", "حصة الإعجابات"), String(totalLikes)),
+    donutChart((totalViews / engMax) * 100, "#e0a526", tf("Views share", "حصة المشاهدات"), String(totalViews)),
+    donutChart((totalMessages / engMax) * 100, "#3b82f6", tf("Messages share", "حصة الرسائل"), String(totalMessages)),
+    donutChart(totalProjects ? (publishedProjects / totalProjects) * 100 : 0, "#22c55e", tf("Published ratio", "نسبة المنشور"), `${publishedProjects}/${totalProjects || 0}`),
+  ].join("");
+
+  // 14-day messages curve
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+    days.push({ key: d.toISOString().slice(0, 10), label: d.toLocaleDateString(LANG === "ar" ? "ar" : "en", { day: "2-digit", month: "short" }), count: 0 });
+  }
+  (messagesForCurve || []).forEach((m) => {
+    const key = String(m.created_at || "").slice(0, 10);
+    const slot = days.find((d) => d.key === key);
+    if (slot) slot.count++;
+  });
+  const spark = sparklinePath(days.map((d) => d.count), 320, 80);
+  $("#sparkWrap", container).innerHTML = `
+    <svg class="spark-svg" viewBox="0 0 ${spark.w} ${spark.h + 24}" width="100%" height="110" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#e0a526" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#e0a526" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${spark.area}" fill="url(#sparkGrad)"/>
+      <path d="${spark.line}" fill="none" stroke="#e0a526" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+    <div class="spark-labels">
+      <span>${esc(days[0]?.label || "")}</span>
+      <span>${esc(days[Math.floor(days.length / 2)]?.label || "")}</span>
+      <span>${esc(days[days.length - 1]?.label || "")}</span>
+    </div>
+    <div class="spark-legend">${tf("Total in period", "الإجمالي في الفترة")}: <b>${days.reduce((s, d) => s + d.count, 0)}</b></div>
+  `;
+
+  // Top likes / views bars
+  const topLikes = [...projects]
+    .sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0))
+    .slice(0, 6)
+    .map((p) => ({ label: i18nPreview(p.title) || p.id, value: Number(p.likes_count) || 0, color: "linear-gradient(90deg,#e11d48,#fb7185)" }));
+  const topViews = [...projects]
+    .sort((a, b) => (b.views_count || 0) - (a.views_count || 0))
+    .slice(0, 6)
+    .map((p) => ({ label: i18nPreview(p.title) || p.id, value: Number(p.views_count) || 0, color: "linear-gradient(90deg,#e0a526,#f5d67b)" }));
+
+  $("#likesBars", container).innerHTML = topLikes.some((x) => x.value > 0)
+    ? barChartRows(topLikes, topLikes[0]?.value || 1)
+    : `<div class="empty-state">${tf("No likes yet.", "لا توجد إعجابات بعد.")}</div>`;
+  $("#viewsBars", container).innerHTML = topViews.some((x) => x.value > 0)
+    ? barChartRows(topViews, topViews[0]?.value || 1)
+    : `<div class="empty-state">${tf("No views recorded yet.", "لا توجد مشاهدات مسجّلة بعد.")}</div>`;
+
+  // Recent messages
   const wrap = $("#recentMsgs", container);
-  if (!recent || !recent.length) { wrap.innerHTML = `<div class="empty-state">${tf("No messages yet.", "لا توجد رسائل بعد.")}</div>`; return; }
+  if (!recent || !recent.length) {
+    wrap.innerHTML = `<div class="empty-state">${tf("No messages yet.", "لا توجد رسائل بعد.")}</div>`;
+    return;
+  }
   const table = h(`<table class="data-table"><thead><tr><th>${tf("From", "من")}</th><th>${tf("Subject", "الموضوع")}</th><th>${tf("Received", "تاريخ الاستلام")}</th></tr></thead><tbody></tbody></table>`);
   const tbody = $("tbody", table);
   recent.forEach((m) => {
