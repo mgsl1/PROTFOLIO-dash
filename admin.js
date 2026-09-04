@@ -1350,38 +1350,95 @@ async function openProjectForm(existingRow, onSaved) {
     techBox.appendChild(chip);
   });
 
-  // media gallery (only for existing projects)
-  if (!isNew) {
-    const mediaSection = h(`
-      <div class="span-2" style="margin-top:20px; border-top:1px solid var(--border); padding-top:18px;">
-        <label style="display:block;font-size:.8rem;color:var(--text-dim);margin-bottom:10px;">${tf("Media Gallery", "معرض الوسائط")}</label>
-        <div id="mediaList"></div>
-        <div class="upload-box" style="margin-top:10px;">
-          <div class="upload-info">
-            <input type="file" accept="image/*,video/*" id="mediaFileInput">
-            <small>${tf("Upload an image or video to add to the gallery", "ارفع صورة أو فيديو لإضافته إلى المعرض")}</small>
-          </div>
+  // Media gallery — works for both new (pending files) and existing projects.
+  // Multiple images/videos can be selected at once.
+  const pendingMediaFiles = []; // File objects queued for upload after project create
+  const mediaSection = h(`
+    <div class="span-2" style="margin-top:20px; border-top:1px solid var(--border); padding-top:18px;">
+      <label style="display:block;font-size:.8rem;color:var(--text-dim);margin-bottom:10px;">${tf("Media Gallery (multiple images OK)", "معرض الوسائط (يمكنك رفع عدة صور)")}</label>
+      <div id="mediaList"></div>
+      <div id="pendingMediaList" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;"></div>
+      <div class="upload-box" style="margin-top:10px;">
+        <div class="upload-info">
+          <input type="file" accept="image/*,video/*" id="mediaFileInput" multiple>
+          <small>${tf("Select one or many images/videos — they will be added to the project gallery", "اختر صورة واحدة أو عدة صور/فيديوهات — ستُضاف إلى معرض المشروع")}</small>
         </div>
       </div>
-    `);
-    form.el.appendChild(mediaSection);
+    </div>
+  `);
+  form.el.appendChild(mediaSection);
+
+  function renderPendingMedia() {
+    const list = $("#pendingMediaList", mediaSection);
+    list.innerHTML = "";
+    if (!pendingMediaFiles.length) return;
+    pendingMediaFiles.forEach((file, idx) => {
+      const isVideo = file.type.startsWith("video");
+      const previewUrl = isVideo ? null : URL.createObjectURL(file);
+      const item = h(`
+        <div class="media-item" style="min-width:180px;max-width:240px;">
+          ${isVideo
+            ? `<div class="cell-thumb" style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;">🎬</div>`
+            : `<img src="${previewUrl}" alt="">`}
+          <div class="grow">
+            <div style="font-size:.78rem;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(file.name)}">${esc(file.name)}</div>
+            <div style="font-size:.72rem;color:var(--text-dim);">${tf("Pending upload", "بانتظار الرفع")}</div>
+          </div>
+          <button class="btn-icon remove-pending" title="${tf("Remove", "إزالة")}">🗑</button>
+        </div>
+      `);
+      $(".remove-pending", item).addEventListener("click", () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        pendingMediaFiles.splice(idx, 1);
+        renderPendingMedia();
+      });
+      list.appendChild(item);
+    });
+  }
+
+  if (!isNew) {
     await loadMediaGallery(existingRow.id, $("#mediaList", mediaSection));
-    $("#mediaFileInput", mediaSection).addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+  } else {
+    $("#mediaList", mediaSection).innerHTML = `<div class="text-dim" style="font-size:.85rem;">${tf("Images selected here will upload after you create the project.", "الصور المختارة هنا ستُرفع بعد إنشاء المشروع.")}</div>`;
+  }
+
+  $("#mediaFileInput", mediaSection).addEventListener("change", async (e) => {
+    const files = [...(e.target.files || [])];
+    e.target.value = "";
+    if (!files.length) return;
+
+    if (isNew) {
+      // Queue files until the project is created
+      pendingMediaFiles.push(...files);
+      renderPendingMedia();
+      toast(tf(`${files.length} file(s) queued — will upload after create`, `تم تجهيز ${files.length} ملف — سيُرفع بعد الإنشاء`));
+      return;
+    }
+
+    // Existing project: upload all selected files immediately
+    let ok = 0, fail = 0;
+    for (const file of files) {
       try {
         const url = await uploadFile(BUCKET_PORTFOLIO, file, `projects/${existingRow.id}/media`);
         const mediaType = file.type.startsWith("video") ? "video" : "image";
-        const { error } = await sb.from("project_media").insert({ project_id: existingRow.id, media_type: mediaType, url, sort_order: 0 });
+        const { error } = await sb.from("project_media").insert({
+          project_id: existingRow.id,
+          media_type: mediaType,
+          url,
+          sort_order: 0,
+          is_cover: false,
+        });
         if (error) throw error;
-        toast(tf("Media added", "تمت إضافة الوسائط"));
-        await loadMediaGallery(existingRow.id, $("#mediaList", mediaSection));
+        ok++;
       } catch (err) {
-        toast(tf("Upload failed: ", "فشل الرفع: ") + err.message, "error");
+        fail++;
+        console.error(err);
       }
-      e.target.value = "";
-    });
-  }
+    }
+    if (ok) toast(tf(`${ok} media file(s) added`, `تمت إضافة ${ok} ملف وسائط`));
+    if (fail) toast(tf(`${fail} upload(s) failed`, `فشل رفع ${fail} ملف`), "error");
+    await loadMediaGallery(existingRow.id, $("#mediaList", mediaSection));
+  });
 
   const foot = h(`
     <div style="display:flex; gap:10px; justify-content:flex-end; width:100%;">
@@ -1417,11 +1474,38 @@ async function openProjectForm(existingRow, onSaved) {
       await sb.from("project_technologies").delete().eq("project_id", projectId);
       if (techIds.length) await sb.from("project_technologies").insert(techIds.map((id, i) => ({ project_id: projectId, technology_id: id, sort_order: i })));
 
-      toast(tf("Project saved", "تم حفظ المشروع"));
+      // Upload any pending media files selected while creating the project
+      if (isNew && pendingMediaFiles.length) {
+        btn.textContent = tf("Uploading media…", "جارٍ رفع الوسائط…");
+        let mediaOk = 0;
+        for (let i = 0; i < pendingMediaFiles.length; i++) {
+          const file = pendingMediaFiles[i];
+          try {
+            const url = await uploadFile(BUCKET_PORTFOLIO, file, `projects/${projectId}/media`);
+            const mediaType = file.type.startsWith("video") ? "video" : "image";
+            const { error: mediaErr } = await sb.from("project_media").insert({
+              project_id: projectId,
+              media_type: mediaType,
+              url,
+              sort_order: i,
+              is_cover: i === 0,
+            });
+            if (mediaErr) throw mediaErr;
+            mediaOk++;
+          } catch (mediaErr) {
+            console.error("Pending media upload failed:", mediaErr);
+          }
+        }
+        if (mediaOk) toast(tf(`Project saved + ${mediaOk} media uploaded`, `تم حفظ المشروع + رفع ${mediaOk} وسائط`));
+        else toast(tf("Project saved", "تم حفظ المشروع"));
+      } else {
+        toast(tf("Project saved", "تم حفظ المشروع"));
+      }
+
       closeModal();
       onSaved && onSaved();
       if (isNew) {
-        // reopen in edit mode so the media gallery becomes available
+        // reopen in edit mode so the media gallery is fully available
         const { data: fresh } = await sb.from("projects").select("*").eq("id", projectId).single();
         if (fresh) openProjectForm(fresh, onSaved);
       }
@@ -1436,7 +1520,7 @@ async function loadMediaGallery(projectId, listEl) {
   listEl.innerHTML = `<div class="loading-row"><div class="spinner"></div></div>`;
   const { data, error } = await sb.from("project_media").select("*").eq("project_id", projectId).order("sort_order");
   if (error) { listEl.innerHTML = `<div class="text-dim">${tf("Couldn't load media.", "تعذّر تحميل الوسائط.")}</div>`; return; }
-  if (!data.length) { listEl.innerHTML = `<div class="text-dim" style="font-size:.85rem;">${tf("No media yet — upload one below.", "لا توجد وسائط بعد — ارفع واحدة أدناه.")}</div>`; return; }
+  if (!data.length) { listEl.innerHTML = `<div class="text-dim" style="font-size:.85rem;">${tf("No media yet — select one or many images/videos below.", "لا توجد وسائط بعد — اختر صورة واحدة أو عدة صور/فيديوهات أدناه.")}</div>`; return; }
   listEl.innerHTML = "";
   data.forEach((m) => {
     const item = h(`
