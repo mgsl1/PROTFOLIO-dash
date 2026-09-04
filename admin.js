@@ -74,6 +74,7 @@ applyLangToDocument();
    itself if no Arabic entry exists yet. */
 const AR_STRINGS = {
   "Overview": "نظرة عامة", "Content": "المحتوى", "Site": "الموقع", "Inbox": "الرسائل الواردة", "Admin": "المسؤول",
+  "AI Assistant": "المساعد الذكي",
   "Dashboard": "لوحة القيادة", "Hero Section": "قسم الواجهة الرئيسية", "About Section": "قسم من أنا",
   "Statistics": "الإحصائيات", "Services": "الخدمات", "Tech Categories": "فئات التقنيات", "Technologies": "التقنيات",
   "Project Categories": "فئات المشاريع", "Projects": "المشاريع", "Experience": "الخبرة", "Education": "التعليم",
@@ -83,10 +84,38 @@ const AR_STRINGS = {
   "Downloads": "الملفات القابلة للتحميل", "Translations": "الترجمات", "Messages": "الرسائل",
   "Contact Info": "معلومات التواصل", "Users": "المستخدمون", "Technology Categories": "فئات التقنيات",
   "SEO Settings": "إعدادات السيو",
+  "AI Chat Settings": "إعدادات دردشة الذكاء الاصطناعي",
+  "AI Chat Intents": "نوايا / معرفة المساعد الذكي",
+  "Intent": "نية",
   "The first thing visitors see on your homepage": "أول ما يراه الزوار في صفحتك الرئيسية",
   "Your story, shown on the homepage": "قصتك، تظهر في الصفحة الرئيسية",
   "Contact details shown in the footer / contact section": "بيانات التواصل الظاهرة في التذييل وقسم التواصل",
   "Global configuration for the whole website": "الإعدادات العامة لكامل الموقع",
+  "Control the portfolio AI assistant — enable/disable, greetings, suggestions, fallback messages": "التحكم الكامل في مساعد الموقع — تفعيل/إيقاف، التحية، الاقتراحات، الرسائل الاحتياطية",
+  "Full control of the portfolio AI assistant. Turn OFF to remove the chat widget completely from the public site.": "تحكم كامل في مساعد الموقع الذكي. عطّله لإزالته بالكامل من الموقع العام.",
+  "Enable AI Chat widget": "تفعيل ودجت الدردشة الذكية",
+  "Enable AI Chat (OFF = remove completely from the site)": "تفعيل دردشة الذكاء الاصطناعي (إيقاف = إزالة كاملة من الموقع)",
+  "Assistant display name": "اسم المساعد الظاهر",
+  "Status text (e.g. Online · AI Assistant)": "نص الحالة (مثال: متصل · مساعد ذكي)",
+  "Input placeholder": "نص الحقل الفارغ",
+  "Greeting message (first message)": "رسالة التحية (أول رسالة)",
+  "Fallback when no intent matches": "الرد الاحتياطي عند عدم وجود تطابق",
+  "Message after clearing chat": "الرسالة بعد مسح المحادثة",
+  "Thinking indicator text": "نص مؤشر التفكير",
+  "Quick suggestion chips": "اقتراحات سريعة",
+  "Title (internal label)": "العنوان (داخلي)",
+  "Keywords (comma or newline separated — any language)": "الكلمات المفتاحية (مفصولة بفاصلة أو سطر جديد — أي لغة)",
+  "Reply — English": "الرد — الإنجليزية",
+  "Reply — French": "الرد — الفرنسية",
+  "Reply — Arabic": "الرد — العربية",
+  "Match mode": "طريقة التطابق",
+  "Contains (keyword appears anywhere)": "يحتوي (الكلمة تظهر في أي مكان)",
+  "Any whole word": "أي كلمة كاملة",
+  "Priority (higher = checked first)": "الأولوية (الأعلى يُفحص أولاً)",
+  "Active": "مفعّل",
+  "Match": "التطابق",
+  "Priority": "الأولوية",
+
   "Category": "فئة", "Certificate": "شهادة", "Education entry": "سجل تعليمي", "FAQ": "سؤال شائع",
   "File": "ملف", "Link": "رابط", "Menu item": "عنصر قائمة", "Page": "صفحة", "Page SEO": "سيو الصفحة",
   "Project": "مشروع", "Section": "قسم", "Service": "خدمة", "Social link": "رابط تواصل اجتماعي",
@@ -510,6 +539,7 @@ const ICONS = {
   mail: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><polyline points="22 6 12 13 2 6"/></svg>`,
   users: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   contact: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+  bot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-.5"/><path d="M8 7V6a4 4 0 0 1 4-4"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M8 14c1.2 1.5 2.8 2.2 4 2.2s2.8-.7 4-2.2"/><path d="M5 11a7 7 0 0 0 14 0"/></svg>`,
 };
 
 const NAV = [
@@ -545,6 +575,10 @@ const NAV = [
   { group: "Inbox", items: [
     { key: "messages", label: "Messages", icon: "mail", countKey: "unreadMessages" },
     { key: "contact_info", label: "Contact Info", icon: "contact" },
+  ]},
+  { group: "AI Assistant", items: [
+    { key: "ai_chat_settings", label: "AI Chat Settings", icon: "bot" },
+    { key: "ai_chat_intents", label: "AI Chat Intents", icon: "bot" },
   ]},
   { group: "Admin", items: [
     { key: "users", label: "Users", icon: "users", adminOnly: true },
@@ -934,6 +968,30 @@ const SCHEMAS = {
       { key: "description", type: "text", label: "Note (where this is used)" },
     ],
   },
+  ai_chat_intents: {
+    table: "ai_chat_intents", title: "AI Chat Intents", singular: "Intent",
+    orderBy: "sort_order",
+    listCols: [
+      { key: "title", label: "Title", render: (r) => `<span class="cell-title">${esc(r.title)}</span><div class="cell-sub">${esc((r.keywords || "").slice(0, 80))}</div>` },
+      { key: "priority", label: "Priority" },
+      { key: "match_mode", label: "Match" },
+      { key: "is_active", label: "Active", render: (r) => r.is_active ? `<span class="badge badge-green">${t("Visible")}</span>` : `<span class="badge badge-gray">${t("Hidden")}</span>` },
+    ],
+    fields: [
+      { key: "title", type: "text", label: "Title (internal label)", placeholder: "Services / Projects / Contact…" },
+      { key: "keywords", type: "textarea", label: "Keywords (comma or newline separated — any language)", placeholder: "service, services, خدمات, ماذا تقدم, what do you offer" },
+      { key: "reply_en", type: "textarea", label: "Reply — English" },
+      { key: "reply_fr", type: "textarea", label: "Reply — French" },
+      { key: "reply_ar", type: "textarea", label: "Reply — Arabic" },
+      { key: "match_mode", type: "select", label: "Match mode", options: [
+        { value: "contains", label: "Contains (keyword appears anywhere)" },
+        { value: "any_word", label: "Any whole word" },
+      ], default: "contains" },
+      { key: "priority", type: "number", label: "Priority (higher = checked first)", default: 0 },
+      { key: "sort_order", type: "number", label: "Sort order", default: 0 },
+      { key: "is_active", type: "boolean", label: "Active", default: true },
+    ],
+  },
 };
 
 function visBadge(v) {
@@ -1151,6 +1209,21 @@ const SINGLETONS = {
       { key: "copyright_text", type: "i18n_textarea", label: "Copyright text" },
       { key: "custom_css", type: "textarea", label: "Custom CSS (advanced)" },
       { key: "custom_js", type: "textarea", label: "Custom JS (advanced)" },
+    ],
+  },
+  ai_chat_settings: {
+    table: "ai_chat_settings", title: "AI Chat Settings",
+    subtitle: "Full control of the portfolio AI assistant. Turn OFF to remove the chat widget completely from the public site.",
+    fields: [
+      { key: "is_enabled", type: "boolean", label: "Enable AI Chat (OFF = remove completely from the site)", default: true },
+      { key: "assistant_name", type: "i18n", label: "Assistant display name" },
+      { key: "status_text", type: "i18n", label: "Status text (e.g. Online · AI Assistant)" },
+      { key: "placeholder", type: "i18n", label: "Input placeholder" },
+      { key: "greeting", type: "i18n_textarea", label: "Greeting message (first message)" },
+      { key: "fallback", type: "i18n_textarea", label: "Fallback when no intent matches" },
+      { key: "cleared_message", type: "i18n_textarea", label: "Message after clearing chat" },
+      { key: "thinking_text", type: "i18n", label: "Thinking indicator text" },
+      { key: "suggestions", type: "i18n_list", label: "Quick suggestion chips" },
     ],
   },
 };
@@ -2032,6 +2105,7 @@ async function renderRoute(key) {
   if (key === "about") return renderSingleton(container, "about");
   if (key === "contact_info") return renderSingleton(container, "contact_info");
   if (key === "site_settings") return renderSingleton(container, "site_settings");
+  if (key === "ai_chat_settings") return renderSingleton(container, "ai_chat_settings");
   if (key === "projects") return renderProjects(container);
   if (key === "messages") return renderMessages(container);
   if (key === "users") return renderUsers(container);
