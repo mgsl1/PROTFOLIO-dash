@@ -88,6 +88,26 @@ const AR_STRINGS = {
   "AI Chat Settings": "إعدادات دردشة الذكاء الاصطناعي",
   "AI Chat Intents": "نوايا / معرفة المساعد الذكي",
   "Intent": "نية",
+  "Preloader Settings": "إعدادات شاشة التحميل",
+  "Preloader (Splash Screen)": "شاشة التحميل (Splash)",
+  "Full control of the loading screen shown when the site first opens. Turn OFF to remove it completely.": "تحكم كامل في شاشة التحميل التي تظهر عند فتح الموقع. عطّلها لإزالتها بالكامل.",
+  "Enable preloader (OFF = remove completely from the site)": "تفعيل شاشة التحميل (إيقاف = إزالة كاملة من الموقع)",
+  "Minimum display time (ms)": "أقل مدة ظهور (ميلي ثانية)",
+  "Show logo": "إظهار الشعار",
+  "Show 3D cube animation": "إظهار مكعب ثلاثي الأبعاد",
+  "Show code snippet": "إظهار سطر الكود",
+  "Show progress bar": "إظهار شريط التقدم",
+  "Show loading text": "إظهار نص التحميل",
+  "Loading text": "نص التحميل",
+  "Code line 1": "سطر الكود 1",
+  "Code line 2": "سطر الكود 2",
+  "Custom logo (optional — empty = default)": "شعار مخصص (اختياري — فارغ = الافتراضي)",
+  "Background color": "لون الخلفية",
+  "Accent color (gold / progress)": "لون التمييز (ذهبي / شريط التقدم)",
+  "Text color": "لون النص",
+  "Code box background": "خلفية صندوق الكود",
+  "Progress bar track color": "لون مسار شريط التقدم",
+  "Custom CSS (advanced — injected on preloader)": "CSS مخصص (متقدم — يُحقن على شاشة التحميل)",
   "The first thing visitors see on your homepage": "أول ما يراه الزوار في صفحتك الرئيسية",
   "Your story, shown on the homepage": "قصتك، تظهر في الصفحة الرئيسية",
   "Contact details shown in the footer / contact section": "بيانات التواصل الظاهرة في التذييل وقسم التواصل",
@@ -567,6 +587,7 @@ const NAV = [
   { group: "Site", items: [
     { key: "site_settings", label: "Site Settings", icon: "settings" },
     { key: "seo_settings", label: "SEO", icon: "search" },
+    { key: "preloader_settings", label: "Preloader Settings", icon: "settings" },
     { key: "navigation_items", label: "Navigation", icon: "nav" },
     { key: "social_links", label: "Social Links", icon: "social" },
     { key: "external_links", label: "External Links", icon: "link" },
@@ -1226,6 +1247,29 @@ const SINGLETONS = {
       { key: "cleared_message", type: "i18n_textarea", label: "Message after clearing chat" },
       { key: "thinking_text", type: "i18n", label: "Thinking indicator text" },
       { key: "suggestions", type: "i18n_list", label: "Quick suggestion chips" },
+    ],
+  },
+  preloader_settings: {
+    table: "preloader_settings", title: "Preloader Settings",
+    subtitle: "Full control of the loading screen shown when the site first opens. Turn OFF to remove it completely.",
+    fields: [
+      { key: "is_enabled", type: "boolean", label: "Enable preloader (OFF = remove completely from the site)", default: true },
+      { key: "min_duration_ms", type: "number", label: "Minimum display time (ms)", default: 2600 },
+      { key: "show_logo", type: "boolean", label: "Show logo", default: true },
+      { key: "show_cube", type: "boolean", label: "Show 3D cube animation", default: true },
+      { key: "show_code", type: "boolean", label: "Show code snippet", default: true },
+      { key: "show_progress_bar", type: "boolean", label: "Show progress bar", default: true },
+      { key: "show_text", type: "boolean", label: "Show loading text", default: true },
+      { key: "loading_text", type: "i18n", label: "Loading text" },
+      { key: "code_line_1", type: "text", label: "Code line 1" },
+      { key: "code_line_2", type: "text", label: "Code line 2" },
+      { key: "logo_url", type: "image", label: "Custom logo (optional — empty = default)", folder: "branding" },
+      { key: "background_color", type: "color", label: "Background color" },
+      { key: "accent_color", type: "color", label: "Accent color (gold / progress)" },
+      { key: "text_color", type: "color", label: "Text color" },
+      { key: "code_bg_color", type: "text", label: "Code box background", placeholder: "rgba(255,255,255,0.03)" },
+      { key: "bar_track_color", type: "text", label: "Progress bar track color", placeholder: "rgba(255,255,255,0.08)" },
+      { key: "custom_css", type: "textarea", label: "Custom CSS (advanced — injected on preloader)" },
     ],
   },
 };
@@ -2108,6 +2152,7 @@ async function renderRoute(key) {
   if (key === "contact_info") return renderSingleton(container, "contact_info");
   if (key === "site_settings") return renderSingleton(container, "site_settings");
   if (key === "ai_chat_settings") return renderSingleton(container, "ai_chat_settings");
+  if (key === "preloader_settings") return renderSingleton(container, "preloader_settings");
   if (key === "projects") return renderProjects(container);
   if (key === "messages") return renderMessages(container);
   if (key === "users") return renderUsers(container);
